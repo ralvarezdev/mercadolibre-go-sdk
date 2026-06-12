@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,7 +29,12 @@ func TestHandler(t *testing.T) {
 	defer srv.Close()
 
 	body := `{"resource":"/items/MLA1","user_id":1,"topic":"items","application_id":2,"attempts":1}`
-	resp, err := http.Post(srv.URL, "application/json", strings.NewReader(body))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, srv.URL, strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +50,11 @@ func TestHandler(t *testing.T) {
 func TestHandler_rejectsGET(t *testing.T) {
 	srv := httptest.NewServer(Handler(func(*http.Request, Notification) error { return nil }))
 	defer srv.Close()
-	resp, err := http.Get(srv.URL)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, http.NoBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}

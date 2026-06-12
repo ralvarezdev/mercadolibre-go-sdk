@@ -2,38 +2,50 @@ package mercadolibre
 
 import "context"
 
-// Category is a category node (GET /categories/{id}).
-type Category struct {
-	ID                       string          `json:"id"`
-	Name                     string          `json:"name"`
-	Picture                  string          `json:"picture,omitempty"`
-	Permalink                string          `json:"permalink,omitempty"`
-	TotalItemsInThisCategory int             `json:"total_items_in_this_category,omitempty"`
-	PathFromRoot             []IDName        `json:"path_from_root,omitempty"`
-	ChildrenCategories       []ChildCategory `json:"children_categories,omitempty"`
-	AttributeTypes           string          `json:"attribute_types,omitempty"`
-	Settings                 *CategorySettings `json:"settings,omitempty"`
-}
+type (
+	// Category is a category node (GET /categories/{id}).
+	Category struct {
+		Settings                 *CategorySettings `json:"settings,omitempty"`
+		ID                       string            `json:"id"`
+		Name                     string            `json:"name"`
+		Picture                  string            `json:"picture,omitempty"`
+		Permalink                string            `json:"permalink,omitempty"`
+		AttributeTypes           string            `json:"attribute_types,omitempty"`
+		PathFromRoot             []IDName          `json:"path_from_root,omitempty"`
+		ChildrenCategories       []ChildCategory   `json:"children_categories,omitempty"`
+		TotalItemsInThisCategory int               `json:"total_items_in_this_category,omitempty"`
+	}
 
-// ChildCategory is a direct child reference of a Category.
-type ChildCategory struct {
-	ID                       string `json:"id"`
-	Name                     string `json:"name"`
-	TotalItemsInThisCategory int    `json:"total_items_in_this_category,omitempty"`
-}
+	// ChildCategory is a direct child reference of a Category.
+	ChildCategory struct {
+		ID                       string `json:"id"`
+		Name                     string `json:"name"`
+		TotalItemsInThisCategory int    `json:"total_items_in_this_category,omitempty"`
+	}
 
-// CategorySettings holds listing rules for a category (subset of fields).
-type CategorySettings struct {
-	ListingAllowed    bool     `json:"listing_allowed,omitempty"`
-	Status            string   `json:"status,omitempty"`
-	BuyingModes       []string `json:"buying_modes,omitempty"`
-	ItemConditions    []string `json:"item_conditions,omitempty"`
-	Currencies        []string `json:"currencies,omitempty"`
-	MaxPicturesPerItem int     `json:"max_pictures_per_item,omitempty"`
-}
+	// CategorySettings holds listing rules for a category (subset of fields).
+	CategorySettings struct {
+		Status             string   `json:"status,omitempty"`
+		BuyingModes        []string `json:"buying_modes,omitempty"`
+		ItemConditions     []string `json:"item_conditions,omitempty"`
+		Currencies         []string `json:"currencies,omitempty"`
+		MaxPicturesPerItem int      `json:"max_pictures_per_item,omitempty"`
+		ListingAllowed     bool     `json:"listing_allowed,omitempty"`
+	}
 
-// CategoriesService accesses categories, their attributes and sale terms.
-type CategoriesService struct{ c *Client }
+	// CategoriesService accesses categories, their attributes and sale terms.
+	CategoriesService struct{ c *Client }
+
+	// Domain is a product domain (GET /domains/{id}).
+	Domain struct {
+		ID         string      `json:"id"`
+		Name       string      `json:"name"`
+		Attributes []Attribute `json:"attributes,omitempty"`
+	}
+
+	// DomainsService accesses product domains and their technical specs.
+	DomainsService struct{ c *Client }
+)
 
 // SiteList returns the top-level categories of a site
 // (GET /sites/{id}/categories).
@@ -57,16 +69,6 @@ func (s *CategoriesService) Attributes(ctx context.Context, categoryID string) (
 func (s *CategoriesService) SaleTerms(ctx context.Context, categoryID string) ([]Attribute, error) {
 	return Get[[]Attribute](ctx, s.c, EPCategorySaleTerms, categoryID)
 }
-
-// Domain is a product domain (GET /domains/{id}).
-type Domain struct {
-	ID         string      `json:"id"`
-	Name       string      `json:"name"`
-	Attributes []Attribute `json:"attributes,omitempty"`
-}
-
-// DomainsService accesses product domains and their technical specs.
-type DomainsService struct{ c *Client }
 
 // Get returns a domain by ID (GET /domains/{id}).
 func (s *DomainsService) Get(ctx context.Context, domainID string) (*Domain, error) {

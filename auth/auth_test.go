@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -24,7 +25,7 @@ func TestAuthCodeURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.Host != "auth.mercadolivre.com.br" { // Brazil = mercadoLIVRE
+	if u.Host != "auth.mercadolivre.com.br" {
 		t.Errorf("host = %q, want auth.mercadolivre.com.br", u.Host)
 	}
 	q := u.Query()
@@ -76,7 +77,11 @@ func TestExchange(t *testing.T) {
 		if r.Form.Get("code_verifier") != "verifier-123" {
 			t.Errorf("missing code_verifier: %v", r.Form)
 		}
-		w.Write([]byte(`{"access_token":"AT","token_type":"bearer","expires_in":21600,"scope":"read write","user_id":7,"refresh_token":"RT1"}`))
+		w.Write(
+			[]byte(
+				`{"access_token":"AT","token_type":"bearer","expires_in":21600,"scope":"read write","user_id":7,"refresh_token":"RT1"}`,
+			),
+		)
 	})
 
 	tok, err := Config{ClientID: "1", ClientSecret: "s"}.Exchange(
@@ -98,8 +103,8 @@ func TestExchange_oauthError(t *testing.T) {
 		w.Write([]byte(`{"error":"invalid_grant","error_description":"already used","status":400}`))
 	})
 	_, err := Config{}.Refresh(context.Background(), "RT")
-	oerr, ok := err.(*Error)
-	if !ok || !oerr.IsInvalidGrant() {
+	var oerr *Error
+	if !errors.As(err, &oerr) || !oerr.IsInvalidGrant() {
 		t.Fatalf("expected invalid_grant *Error, got %T %v", err, err)
 	}
 }

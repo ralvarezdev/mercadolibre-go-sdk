@@ -16,32 +16,31 @@ import (
 type Topic string
 
 const (
-	TopicOrders        Topic = "orders"
-	TopicOrdersV2      Topic = "orders_v2"
+	TopicOrders         Topic = "orders"
+	TopicOrdersV2       Topic = "orders_v2"
 	TopicOrdersFeedback Topic = "orders_feedback"
-	TopicItems         Topic = "items"
-	TopicQuestions     Topic = "questions"
-	TopicMessages      Topic = "messages"
-	TopicPayments      Topic = "payments"
-	TopicShipments     Topic = "shipments"
-	TopicPrices        Topic = "prices"
-	TopicCatalog       Topic = "catalog_item_competition_status"
-	TopicPromotions    Topic = "public_offers"
-	TopicVISLeads      Topic = "vis_leads"
-	TopicPostPurchase  Topic = "post_purchase"
-	TopicStock         Topic = "stock-locations"
+	TopicItems          Topic = "items"
+	TopicQuestions      Topic = "questions"
+	TopicMessages       Topic = "messages"
+	TopicPayments       Topic = "payments"
+	TopicShipments      Topic = "shipments"
+	TopicPrices         Topic = "prices"
+	TopicCatalog        Topic = "catalog_item_competition_status"
+	TopicPromotions     Topic = "public_offers"
+	TopicVISLeads       Topic = "vis_leads"
+	TopicPostPurchase   Topic = "post_purchase"
+	TopicStock          Topic = "stock-locations"
 )
 
 // Notification is the webhook payload pushed to your callback URL.
 type Notification struct {
-	// Resource is the API path of the affected resource, e.g. "/orders/123".
-	Resource      string    `json:"resource"`
-	UserID        int64     `json:"user_id"`
-	Topic         Topic     `json:"topic"`
-	ApplicationID int64     `json:"application_id"`
-	Attempts      int       `json:"attempts"`
 	Sent          time.Time `json:"sent"`
 	Received      time.Time `json:"received"`
+	Resource      string    `json:"resource"`
+	Topic         Topic     `json:"topic"`
+	UserID        int64     `json:"user_id"`
+	ApplicationID int64     `json:"application_id"`
+	Attempts      int       `json:"attempts"`
 }
 
 // Parse decodes a notification from a JSON body.

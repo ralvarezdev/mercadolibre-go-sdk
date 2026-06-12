@@ -5,61 +5,81 @@ import (
 	"net/url"
 )
 
-// Claim is a post-purchase claim/return/change/mediation
-// (GET /post-purchase/v1/claims/{id}).
-type Claim struct {
-	ID              int64            `json:"id"`
-	ResourceID      int64            `json:"resource_id"`
-	Resource        string           `json:"resource"` // shipment | payment | order | purchase
-	Status          string           `json:"status"`   // opened | closed
-	Type            string           `json:"type"`     // mediations | returns | change | ...
-	Stage           string           `json:"stage"`    // claim | dispute | recontact | ...
-	ParentID        *int64           `json:"parent_id"`
-	ReasonID        string           `json:"reason_id"`
-	Fulfilled       bool             `json:"fulfilled"`
-	QuantityType    *string          `json:"quantity_type"`
-	ClaimedQuantity int              `json:"claimed_quantity,omitempty"`
-	ClaimVersion    float64          `json:"claim_version,omitempty"`
-	Players         []ClaimPlayer    `json:"players"`
-	Resolution      *ClaimResolution `json:"resolution"`
-	SiteID          string           `json:"site_id"`
-	DateCreated     Time             `json:"date_created"`
-	LastUpdated     Time             `json:"last_updated"`
-	RelatedEntities []string         `json:"related_entities,omitempty"`
-}
+type (
+	// Claim is a post-purchase claim/return/change/mediation
+	// (GET /post-purchase/v1/claims/{id}).
+	Claim struct {
+		DateCreated     Time             `json:"date_created"`
+		LastUpdated     Time             `json:"last_updated"`
+		ParentID        *int64           `json:"parent_id"`
+		QuantityType    *string          `json:"quantity_type"`
+		Resolution      *ClaimResolution `json:"resolution"`
+		Type            string           `json:"type"`
+		Resource        string           `json:"resource"`
+		Status          string           `json:"status"`
+		Stage           string           `json:"stage"`
+		ReasonID        string           `json:"reason_id"`
+		SiteID          string           `json:"site_id"`
+		RelatedEntities []string         `json:"related_entities,omitempty"`
+		Players         []ClaimPlayer    `json:"players"`
+		ClaimVersion    float64          `json:"claim_version,omitempty"`
+		ID              int64            `json:"id"`
+		ResourceID      int64            `json:"resource_id"`
+		ClaimedQuantity int              `json:"claimed_quantity,omitempty"`
+		Fulfilled       bool             `json:"fulfilled"`
+	}
 
-// ClaimPlayer is a participant in a claim and the actions available to them.
-type ClaimPlayer struct {
-	Role             string         `json:"role"` // complainant | respondent
-	Type             string         `json:"type"` // buyer | seller | ...
-	UserID           int64          `json:"user_id"`
-	AvailableActions []ClaimAction  `json:"available_actions,omitempty"`
-}
+	// ClaimPlayer is a participant in a claim and the actions available to them.
+	ClaimPlayer struct {
+		Role             string        `json:"role"`
+		Type             string        `json:"type"`
+		AvailableActions []ClaimAction `json:"available_actions,omitempty"`
+		UserID           int64         `json:"user_id"`
+	}
 
-// ClaimAction is an action a player may take.
-type ClaimAction struct {
-	Action    string  `json:"action"`
-	Mandatory bool    `json:"mandatory"`
-	DueDate   *string `json:"due_date"`
-}
+	// ClaimAction is an action a player may take.
+	ClaimAction struct {
+		DueDate   *string `json:"due_date"`
+		Action    string  `json:"action"`
+		Mandatory bool    `json:"mandatory"`
+	}
 
-// ClaimResolution is the outcome of a closed claim.
-type ClaimResolution struct {
-	Reason         string   `json:"reason"`
-	DateCreated    Time     `json:"date_created"`
-	Benefited      []string `json:"benefited"`
-	ClosedBy       string   `json:"closed_by"`
-	AppliedCoverage bool    `json:"applied_coverage"`
-}
+	// ClaimResolution is the outcome of a closed claim.
+	ClaimResolution struct {
+		DateCreated     Time     `json:"date_created"`
+		Reason          string   `json:"reason"`
+		ClosedBy        string   `json:"closed_by"`
+		Benefited       []string `json:"benefited"`
+		AppliedCoverage bool     `json:"applied_coverage"`
+	}
 
-// ClaimSearchResponse is the response of /post-purchase/v1/claims/search.
-type ClaimSearchResponse struct {
-	Paging Paging  `json:"paging"`
-	Data   []Claim `json:"data"`
-}
+	// ClaimSearchResponse is the response of /post-purchase/v1/claims/search.
+	ClaimSearchResponse struct {
+		Data   []Claim `json:"data"`
+		Paging Paging  `json:"paging"`
+	}
 
-// ClaimsService accesses claims, returns and changes.
-type ClaimsService struct{ c *Client }
+	// ClaimHistoryEntry is one event in a claim's history
+	// (GET /post-purchase/v1/claims/{id}/history).
+	ClaimHistoryEntry struct {
+		Date    Time   `json:"date"`
+		NewData any    `json:"new_data,omitempty"`
+		Action  string `json:"action,omitempty"`
+		Role    string `json:"role,omitempty"`
+		Detail  string `json:"detail,omitempty"`
+		UserID  int64  `json:"user_id,omitempty"`
+	}
+
+	// TakeActionRequest is the body of POST /post-purchase/v1/claims/{id}/actions.
+	TakeActionRequest struct {
+		Action string `json:"action"`
+		SiteID string `json:"site_id,omitempty"`
+		Reason string `json:"reason,omitempty"`
+	}
+
+	// ClaimsService accesses claims, returns and changes.
+	ClaimsService struct{ c *Client }
+)
 
 // Get returns a claim by ID (GET /post-purchase/v1/claims/{id}).
 func (s *ClaimsService) Get(ctx context.Context, claimID int64) (*Claim, error) {
@@ -76,32 +96,19 @@ func (s *ClaimsService) Search(ctx context.Context, params url.Values) (*ClaimSe
 
 // SearchByPlayer is a convenience for the common "claims where user has role"
 // query (e.g. role "respondent" for a seller).
-func (s *ClaimsService) SearchByPlayer(ctx context.Context, userID int64, role, status string, opts ListOptions) (*ClaimSearchResponse, error) {
+func (s *ClaimsService) SearchByPlayer(
+	ctx context.Context,
+	userID int64,
+	role, status string,
+	opts ListOptions,
+) (*ClaimSearchResponse, error) {
 	q := opts.Values()
-	q.Set("players.user_id", itoa(userID))
-	q.Set("players.role", role)
+	q.Set(string(QueryParamPlayersUserID), itoa(userID))
+	q.Set(string(QueryParamPlayersRole), role)
 	if status != "" {
-		q.Set("status", status)
+		q.Set(string(QueryParamStatus), status)
 	}
 	return s.Search(ctx, q)
-}
-
-// ClaimHistoryEntry is one event in a claim's history
-// (GET /post-purchase/v1/claims/{id}/history).
-type ClaimHistoryEntry struct {
-	Date    Time   `json:"date"`
-	Action  string `json:"action,omitempty"`
-	Role    string `json:"role,omitempty"`
-	UserID  int64  `json:"user_id,omitempty"`
-	Detail  string `json:"detail,omitempty"`
-	NewData any    `json:"new_data,omitempty"`
-}
-
-// TakeActionRequest is the body of POST /post-purchase/v1/claims/{id}/actions.
-type TakeActionRequest struct {
-	Action string `json:"action"`
-	SiteID string `json:"site_id,omitempty"`
-	Reason string `json:"reason,omitempty"`
 }
 
 // History returns the event history of a claim

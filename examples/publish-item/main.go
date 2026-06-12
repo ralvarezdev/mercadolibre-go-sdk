@@ -54,8 +54,8 @@ func main() {
 		Price:             *price,
 		CurrencyID:        *currency,
 		AvailableQuantity: *qty,
-		BuyingMode:        mercadolibre.BuyingModeBuyItNow,
-		Condition:         mercadolibre.ItemConditionNew,
+		BuyingMode:        string(mercadolibre.BuyingModeBuyItNow),
+		Condition:         string(mercadolibre.ItemConditionNew),
 		ListingTypeID:     *listingType,
 	}
 
@@ -77,7 +77,7 @@ func main() {
 
 	// Optionally pause the item so it doesn't show publicly.
 	if *pauseAfter {
-		updated, err := client.Items.UpdateStatus(ctx, item.ID, mercadolibre.ItemStatusPaused)
+		updated, err := client.Items.UpdateStatus(ctx, item.ID, string(mercadolibre.ItemStatusPaused))
 		if err != nil {
 			log.Fatalf("pause item: %v", err)
 		}

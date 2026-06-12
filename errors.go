@@ -7,29 +7,31 @@ import (
 	"net/http"
 )
 
-// Cause is one structured cause inside an API error response. MercadoLibre
-// populates it inconsistently (sometimes empty, sometimes objects), so callers
-// should treat it as best-effort detail.
-type Cause struct {
-	Code    string `json:"code,omitempty"`
-	Message string `json:"message,omitempty"`
-}
+type (
+	// Cause is one structured cause inside an API error response. MercadoLibre
+	// populates it inconsistently (sometimes empty, sometimes objects), so callers
+	// should treat it as best-effort detail.
+	Cause struct {
+		Code    string `json:"code,omitempty"`
+		Message string `json:"message,omitempty"`
+	}
 
-// APIError represents a non-2xx response from the MercadoLibre API. It decodes
-// the three error shapes observed across the docs into a single type:
-//
-//	{ "error":"invalid_grant", "error_description":"…", "status":400, "cause":[] }
-//	{ "status":403, "error":"Invalid scopes", "code":"FORBIDDEN" }
-//	{ "status":403, "error":"access_denied", "message":"…", "code":"FORBIDDEN" }
-type APIError struct {
-	StatusCode int         // HTTP status code
-	Code       string      // "code" field, e.g. "FORBIDDEN"
-	ErrName    string      // "error" field, e.g. "invalid_grant" or "access_denied"
-	Message    string      // "message" or "error_description"
-	Cause      []Cause     // structured causes when present
-	Raw        []byte      // original response body
-	Header     http.Header // response headers (useful for Retry-After, X-Request-Id)
-}
+	// APIError represents a non-2xx response from the MercadoLibre API. It decodes
+	// the three error shapes observed across the docs into a single type:
+	//
+	//	{ "error":"invalid_grant", "error_description":"…", "status":400, "cause":[] }
+	//	{ "status":403, "error":"Invalid scopes", "code":"FORBIDDEN" }
+	//	{ "status":403, "error":"access_denied", "message":"…", "code":"FORBIDDEN" }
+	APIError struct {
+		Header     http.Header
+		Code       string
+		ErrName    string
+		Message    string
+		Cause      []Cause
+		Raw        []byte
+		StatusCode int
+	}
+)
 
 func (e *APIError) Error() string {
 	msg := e.Message
@@ -80,38 +82,43 @@ func parseAPIError(status int, body []byte, header http.Header) *APIError {
 
 	// Decode into an intermediate so a malformed "cause" never breaks parsing.
 	var raw struct {
-		Status      int             `json:"status"`
+		Description string          `json:"error_description"`
 		Error       string          `json:"error"`
 		Code        string          `json:"code"`
 		Message     string          `json:"message"`
-		Description string          `json:"error_description"`
 		Cause       json.RawMessage `json:"cause"`
+		Status      int             `json:"status"`
 	}
-	if err := json.Unmarshal(body, &raw); err == nil {
-		e.ErrName = raw.Error
-		e.Code = raw.Code
-		if raw.Message != "" {
-			e.Message = raw.Message
-		} else {
-			e.Message = raw.Description
-		}
-		if raw.Status != 0 {
-			e.StatusCode = raw.Status
-		}
-		if len(raw.Cause) > 0 {
-			// Try []Cause first, then []string.
-			var cs []Cause
-			if json.Unmarshal(raw.Cause, &cs) == nil {
-				e.Cause = cs
-			} else {
-				var ss []string
-				if json.Unmarshal(raw.Cause, &ss) == nil {
-					for _, s := range ss {
-						e.Cause = append(e.Cause, Cause{Message: s})
-					}
-				}
-			}
-		}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return e
+	}
+
+	e.ErrName = raw.Error
+	e.Code = raw.Code
+	if raw.Message != "" {
+		e.Message = raw.Message
+	} else {
+		e.Message = raw.Description
+	}
+	if raw.Status != 0 {
+		e.StatusCode = raw.Status
+	}
+	if len(raw.Cause) == 0 {
+		return e
+	}
+
+	// Try []Cause first, then []string.
+	var cs []Cause
+	if json.Unmarshal(raw.Cause, &cs) == nil {
+		e.Cause = cs
+		return e
+	}
+	var ss []string
+	if json.Unmarshal(raw.Cause, &ss) != nil {
+		return e
+	}
+	for _, s := range ss {
+		e.Cause = append(e.Cause, Cause{Message: s})
 	}
 	return e
 }

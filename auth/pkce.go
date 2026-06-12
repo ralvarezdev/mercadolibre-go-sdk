@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 )
 
+const pkceMethod = "S256"
+
 // PKCE holds a code verifier and its derived S256 challenge.
 type PKCE struct {
 	Verifier  string
@@ -24,5 +26,5 @@ func GeneratePKCE() (PKCE, error) {
 	verifier := base64.RawURLEncoding.EncodeToString(b)
 	sum := sha256.Sum256([]byte(verifier))
 	challenge := base64.RawURLEncoding.EncodeToString(sum[:])
-	return PKCE{Verifier: verifier, Challenge: challenge, Method: "S256"}, nil
+	return PKCE{Verifier: verifier, Challenge: challenge, Method: pkceMethod}, nil
 }

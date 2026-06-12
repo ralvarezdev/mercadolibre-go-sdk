@@ -11,15 +11,20 @@ import (
 	"time"
 )
 
-// tokenURL is the token endpoint (same host for every site). It is a var so
-// tests can point it at a stub server.
-var tokenURL = "https://api.mercadolibre.com/oauth/token"
+var (
+	// tokenURL is the token endpoint (same host for every site). It is a var so
+	// tests can point it at a stub server.
+	tokenURL = TokenEndpoint
+
+	// httpClient is overridable in tests.
+	httpClient = http.DefaultClient
+)
 
 // Error is an OAuth error response from the token endpoint.
 type Error struct {
-	StatusCode  int    `json:"-"`
 	Code        string `json:"error"`
 	Description string `json:"error_description"`
+	StatusCode  int    `json:"-"`
 }
 
 func (e *Error) Error() string {
@@ -39,15 +44,15 @@ type AuthURLOption func(url.Values)
 // WithPKCE adds the PKCE code challenge to the authorization URL.
 func WithPKCE(p PKCE) AuthURLOption {
 	return func(v url.Values) {
-		v.Set("code_challenge", p.Challenge)
-		v.Set("code_challenge_method", p.Method)
+		v.Set(string(ParamCodeChallenge), p.Challenge)
+		v.Set(string(ParamCodeChallengeMethod), p.Method)
 	}
 }
 
 // WithScope sets the requested scopes (default: the app's configured scopes).
 // Valid values: "offline_access", "read", "write".
 func WithScope(scopes ...string) AuthURLOption {
-	return func(v url.Values) { v.Set("scope", strings.Join(scopes, " ")) }
+	return func(v url.Values) { v.Set(string(ParamScope), strings.Join(scopes, " ")) }
 }
 
 // AuthCodeURL builds the URL to which the user is redirected to authorize the
@@ -55,19 +60,19 @@ func WithScope(scopes ...string) AuthURLOption {
 // callback.
 func (c Config) AuthCodeURL(state string, opts ...AuthURLOption) string {
 	v := url.Values{}
-	v.Set("response_type", "code")
-	v.Set("client_id", c.ClientID)
-	v.Set("redirect_uri", c.RedirectURI)
+	v.Set(string(ParamResponseType), string(ResponseTypeCode))
+	v.Set(string(ParamClientID), c.ClientID)
+	v.Set(string(ParamRedirectURI), c.RedirectURI)
 	if state != "" {
-		v.Set("state", state)
+		v.Set(string(ParamState), state)
 	}
 	for _, opt := range opts {
 		opt(v)
 	}
 	return (&url.URL{
-		Scheme:   "https",
+		Scheme:   SchemeHTTPS,
 		Host:     AuthHost(c.Site),
-		Path:     "/authorization",
+		Path:     AuthorizationPath,
 		RawQuery: v.Encode(),
 	}).String()
 }
@@ -78,17 +83,17 @@ type ExchangeOption func(url.Values)
 // WithCodeVerifier supplies the PKCE code verifier matching the challenge used
 // in AuthCodeURL.
 func WithCodeVerifier(verifier string) ExchangeOption {
-	return func(v url.Values) { v.Set("code_verifier", verifier) }
+	return func(v url.Values) { v.Set(string(ParamCodeVerifier), verifier) }
 }
 
 // Exchange trades an authorization code for an access/refresh token.
 func (c Config) Exchange(ctx context.Context, code string, opts ...ExchangeOption) (*Token, error) {
 	v := url.Values{}
-	v.Set("grant_type", "authorization_code")
-	v.Set("client_id", c.ClientID)
-	v.Set("client_secret", c.ClientSecret)
-	v.Set("code", code)
-	v.Set("redirect_uri", c.RedirectURI)
+	v.Set(string(ParamGrantType), string(GrantTypeAuthorizationCode))
+	v.Set(string(ParamClientID), c.ClientID)
+	v.Set(string(ParamClientSecret), c.ClientSecret)
+	v.Set(string(ParamCode), code)
+	v.Set(string(ParamRedirectURI), c.RedirectURI)
 	for _, opt := range opts {
 		opt(v)
 	}
@@ -100,23 +105,20 @@ func (c Config) Exchange(ctx context.Context, code string, opts ...ExchangeOptio
 // is now invalid.
 func (c Config) Refresh(ctx context.Context, refreshToken string) (*Token, error) {
 	v := url.Values{}
-	v.Set("grant_type", "refresh_token")
-	v.Set("client_id", c.ClientID)
-	v.Set("client_secret", c.ClientSecret)
-	v.Set("refresh_token", refreshToken)
+	v.Set(string(ParamGrantType), string(GrantTypeRefreshToken))
+	v.Set(string(ParamClientID), c.ClientID)
+	v.Set(string(ParamClientSecret), c.ClientSecret)
+	v.Set(string(ParamRefreshToken), refreshToken)
 	return c.token(ctx, v)
 }
-
-// httpClient is overridable in tests.
-var httpClient = http.DefaultClient
 
 func (c Config) token(ctx context.Context, form url.Values) (*Token, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set(HeaderAccept, string(ContentTypeJSON))
+	req.Header.Set(HeaderContentType, string(ContentTypeFormURLEncoded))
 
 	resp, err := httpClient.Do(req)
 	if err != nil {

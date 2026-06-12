@@ -26,7 +26,7 @@ func main() {
 	clientID := flag.String("client-id", "", "application APP ID")
 	clientSecret := flag.String("client-secret", "", "application Secret Key")
 	redirect := flag.String("redirect", "", "redirect URI (must match the app config)")
-	site := flag.String("site", mercadolibre.SiteArgentina, "site ID, e.g. MLA")
+	site := flag.String("site", string(mercadolibre.SiteArgentina), "site ID, e.g. MLA")
 	code := flag.String("code", "", "authorization code from the redirect")
 	verifier := flag.String("verifier", "", "PKCE code verifier from step 1")
 	tokenFile := flag.String("token-file", "meli-token.json", "where to persist the token")
@@ -59,7 +59,7 @@ func main() {
 		log.Fatalf("exchange: %v", err)
 	}
 	store := auth.NewFileStore(*tokenFile)
-	if err := store.Save(ctx, tok); err != nil {
+	if err = store.Save(ctx, tok); err != nil {
 		log.Fatalf("save token: %v", err)
 	}
 

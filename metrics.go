@@ -7,58 +7,60 @@ import (
 	"time"
 )
 
-// VisitsDetail breaks visits down by company/source.
-type VisitsDetail struct {
-	Company  string `json:"company"`
-	Quantity int    `json:"quantity"`
-}
+type (
+	// VisitsDetail breaks visits down by company/source.
+	VisitsDetail struct {
+		Company  string `json:"company"`
+		Quantity int    `json:"quantity"`
+	}
 
-// ItemVisits is total item visits over a date range (GET /items/visits).
-type ItemVisits struct {
-	ItemID       string         `json:"item_id"`
-	DateFrom     Time           `json:"date_from"`
-	DateTo       Time           `json:"date_to"`
-	TotalVisits  int            `json:"total_visits"`
-	VisitsDetail []VisitsDetail `json:"visits_detail"`
-}
+	// ItemVisits is total item visits over a date range (GET /items/visits).
+	ItemVisits struct {
+		DateFrom     Time           `json:"date_from"`
+		DateTo       Time           `json:"date_to"`
+		ItemID       string         `json:"item_id"`
+		VisitsDetail []VisitsDetail `json:"visits_detail"`
+		TotalVisits  int            `json:"total_visits"`
+	}
 
-// UserVisits is total visits across a user's items over a date range
-// (GET /users/{id}/items_visits).
-type UserVisits struct {
-	UserID       int64          `json:"user_id"`
-	DateFrom     Time           `json:"date_from"`
-	DateTo       Time           `json:"date_to"`
-	TotalVisits  int            `json:"total_visits"`
-	VisitsDetail []VisitsDetail `json:"visits_detail"`
-}
+	// UserVisits is total visits across a user's items over a date range
+	// (GET /users/{id}/items_visits).
+	UserVisits struct {
+		DateFrom     Time           `json:"date_from"`
+		DateTo       Time           `json:"date_to"`
+		VisitsDetail []VisitsDetail `json:"visits_detail"`
+		UserID       int64          `json:"user_id"`
+		TotalVisits  int            `json:"total_visits"`
+	}
 
-// VisitsBucket is one time-interval bucket in a time-window visits response.
-type VisitsBucket struct {
-	Date         Time           `json:"date"`
-	Total        int            `json:"total"`
-	VisitsDetail []VisitsDetail `json:"visits_detail"`
-}
+	// VisitsBucket is one time-interval bucket in a time-window visits response.
+	VisitsBucket struct {
+		Date         Time           `json:"date"`
+		VisitsDetail []VisitsDetail `json:"visits_detail"`
+		Total        int            `json:"total"`
+	}
 
-// TimeWindowVisits is the response of the visits/time_window endpoints.
-type TimeWindowVisits struct {
-	ItemID      string         `json:"item_id,omitempty"`
-	UserID      int64          `json:"user_id,omitempty"`
-	DateFrom    Time           `json:"date_from"`
-	DateTo      Time           `json:"date_to"`
-	TotalVisits int            `json:"total_visits"`
-	Last        int            `json:"last"`
-	Unit        string         `json:"unit"`
-	Results     []VisitsBucket `json:"results"`
-}
+	// TimeWindowVisits is the response of the visits/time_window endpoints.
+	TimeWindowVisits struct {
+		DateFrom    Time           `json:"date_from"`
+		DateTo      Time           `json:"date_to"`
+		ItemID      string         `json:"item_id,omitempty"`
+		Unit        string         `json:"unit"`
+		Results     []VisitsBucket `json:"results"`
+		UserID      int64          `json:"user_id,omitempty"`
+		TotalVisits int            `json:"total_visits"`
+		Last        int            `json:"last"`
+	}
 
-// Trend is a trending search keyword (GET /trends/{site}[/{category}]).
-type Trend struct {
-	Keyword string `json:"keyword"`
-	URL     string `json:"url"`
-}
+	// Trend is a trending search keyword (GET /trends/{site}[/{category}]).
+	Trend struct {
+		Keyword string `json:"keyword"`
+		URL     string `json:"url"`
+	}
 
-// MetricsService accesses visits, trends and seller reputation.
-type MetricsService struct{ c *Client }
+	// MetricsService accesses visits, trends and seller reputation.
+	MetricsService struct{ c *Client }
+)
 
 const dateOnly = "2006-01-02"
 
@@ -66,9 +68,9 @@ const dateOnly = "2006-01-02"
 // (GET /items/visits?ids={id}&date_from=&date_to=).
 func (s *MetricsService) ItemVisits(ctx context.Context, itemID string, from, to time.Time) (*ItemVisits, error) {
 	q := url.Values{
-		"ids":       {itemID},
-		"date_from": {from.Format(dateOnly)},
-		"date_to":   {to.Format(dateOnly)},
+		string(QueryParamIDs):      {itemID},
+		string(QueryParamDateFrom): {from.Format(dateOnly)},
+		string(QueryParamDateTo):   {to.Format(dateOnly)},
 	}
 	return GetQ[*ItemVisits](ctx, s.c, EPItemsVisits, q)
 }
@@ -77,21 +79,27 @@ func (s *MetricsService) ItemVisits(ctx context.Context, itemID string, from, to
 // (GET /users/{id}/items_visits?date_from=&date_to=).
 func (s *MetricsService) UserVisits(ctx context.Context, userID int64, from, to time.Time) (*UserVisits, error) {
 	q := url.Values{
-		"date_from": {from.Format(dateOnly)},
-		"date_to":   {to.Format(dateOnly)},
+		string(QueryParamDateFrom): {from.Format(dateOnly)},
+		string(QueryParamDateTo):   {to.Format(dateOnly)},
 	}
 	return GetQ[*UserVisits](ctx, s.c, EPUserItemsVisits, q, userID)
 }
 
 // ItemVisitsTimeWindow returns an item's visits bucketed over the last N units
 // (GET /items/{id}/visits/time_window?last=&unit=&ending=). unit is e.g. "day".
-func (s *MetricsService) ItemVisitsTimeWindow(ctx context.Context, itemID string, last int, unit string, ending time.Time) (*TimeWindowVisits, error) {
+func (s *MetricsService) ItemVisitsTimeWindow(
+	ctx context.Context,
+	itemID string,
+	last int,
+	unit string,
+	ending time.Time,
+) (*TimeWindowVisits, error) {
 	q := url.Values{
-		"last": {strconv.Itoa(last)},
-		"unit": {unit},
+		string(QueryParamLast): {strconv.Itoa(last)},
+		string(QueryParamUnit): {unit},
 	}
 	if !ending.IsZero() {
-		q.Set("ending", ending.Format(dateOnly))
+		q.Set(string(QueryParamEnding), ending.Format(dateOnly))
 	}
 	return GetQ[*TimeWindowVisits](ctx, s.c, EPItemVisitsTimeWindow, q, itemID)
 }

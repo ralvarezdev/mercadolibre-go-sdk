@@ -11,46 +11,48 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/ralvarezdev/mercadolibre-go-sdk/auth"
 	"golang.org/x/time/rate"
+
+	"github.com/ralvarezdev/mercadolibre-go-sdk/auth"
 )
 
-// DefaultBaseURL is the MercadoLibre REST API root.
-const DefaultBaseURL = "https://api.mercadolibre.com"
+const (
+	// DefaultBaseURL is the MercadoLibre REST API root.
+	DefaultBaseURL = "https://api.mercadolibre.com"
 
-// DefaultUserAgent is sent unless overridden with WithUserAgent.
-const DefaultUserAgent = "mercadolibre-go-sdk"
+	// DefaultUserAgent is sent unless overridden with WithUserAgent.
+	DefaultUserAgent = "mercadolibre-go-sdk"
+)
 
-// Client is a MercadoLibre API client. It is safe for concurrent use.
-type Client struct {
-	baseURL   *url.URL
-	http      *http.Client
-	tokens    auth.TokenSource
-	userAgent string
-	limiter   *rate.Limiter // optional; nil = no client-side limiting
-	retry     RetryPolicy
+type (
+	// Client is a MercadoLibre API client. It is safe for concurrent use.
+	Client struct {
+		tokens     auth.TokenSource
+		Messaging  *MessagingService
+		Items      *ItemsService
+		Categories *CategoriesService
+		Domains    *DomainsService
+		Currencies *CurrenciesService
+		Locations  *LocationsService
+		Orders     *OrdersService
+		Shipments  *ShipmentsService
+		Users      *UsersService
+		Questions  *QuestionsService
+		Promotions *PromotionsService
+		Metrics    *MetricsService
+		Claims     *ClaimsService
+		Billing    *BillingService
+		http       *http.Client
+		Sites      *SitesService
+		limiter    *rate.Limiter
+		baseURL    *url.URL
+		userAgent  string
+		retry      RetryPolicy
+	}
 
-	// Typed services. Added incrementally; everything else is reachable via the
-	// generic Get/Post/Put/Delete helpers.
-	Users      *UsersService
-	Sites      *SitesService
-	Items      *ItemsService
-	Categories *CategoriesService
-	Domains    *DomainsService
-	Currencies *CurrenciesService
-	Locations  *LocationsService
-	Orders     *OrdersService
-	Shipments  *ShipmentsService
-	Questions  *QuestionsService
-	Messaging  *MessagingService
-	Claims     *ClaimsService
-	Metrics    *MetricsService
-	Promotions *PromotionsService
-	Billing    *BillingService
-}
-
-// Option configures a Client.
-type Option func(*Client)
+	// Option configures a Client.
+	Option func(*Client)
+)
 
 // WithHTTPClient sets the underlying *http.Client (timeouts, transport, proxy).
 func WithHTTPClient(h *http.Client) Option { return func(c *Client) { c.http = h } }

@@ -37,8 +37,8 @@ type Store interface {
 
 // MemoryStore is an in-process Store. Not durable across restarts.
 type MemoryStore struct {
-	mu  sync.Mutex
 	tok *Token
+	mu  sync.Mutex
 }
 
 // NewMemoryStore returns a MemoryStore optionally seeded with an initial token.
@@ -48,7 +48,7 @@ func (m *MemoryStore) Load(context.Context) (*Token, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.tok == nil {
-		return nil, nil
+		return (*Token)(nil), nil
 	}
 	cp := *m.tok
 	return &cp, nil
@@ -77,7 +77,8 @@ func (f *FileStore) Load(context.Context) (*Token, error) {
 	b, err := os.ReadFile(f.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			var t *Token
+			return t, nil
 		}
 		return nil, err
 	}
@@ -117,12 +118,11 @@ func (f *FileStore) Save(_ context.Context, t *Token) error {
 // returning it. Refreshes are serialized (single-flight) so concurrent callers
 // never burn a single-use refresh token twice.
 type RefreshingTokenSource struct {
-	cfg    Config
 	store  Store
+	tok    *Token
+	cfg    Config
 	leeway time.Duration
-
-	mu  sync.Mutex
-	tok *Token
+	mu     sync.Mutex
 }
 
 // NewRefreshingTokenSource builds a refreshing source. If initial is nil it is

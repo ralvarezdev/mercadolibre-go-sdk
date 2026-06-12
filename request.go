@@ -15,28 +15,30 @@ import (
 	"time"
 )
 
-// RetryPolicy controls automatic retries on 429 and 5xx responses (and transient
-// network errors). Set MaxAttempts to 1 to disable retries.
-type RetryPolicy struct {
-	MaxAttempts int           // total attempts including the first
-	BaseDelay   time.Duration // initial backoff
-	MaxDelay    time.Duration // cap on backoff
-}
+type (
+	// RetryPolicy controls automatic retries on 429 and 5xx responses (and transient
+	// network errors). Set MaxAttempts to 1 to disable retries.
+	RetryPolicy struct {
+		MaxAttempts int           // total attempts including the first
+		BaseDelay   time.Duration // initial backoff
+		MaxDelay    time.Duration // cap on backoff
+	}
+
+	// Request is a typed request with a JSON body of type B. Use struct{} for B when
+	// there is no body.
+	Request[B any] struct {
+		Query    url.Values
+		Header   http.Header
+		Body     *B
+		Endpoint Endpoint
+		Args     []any
+	}
+)
 
 // DefaultRetryPolicy returns sensible defaults: 4 attempts, exponential backoff
 // from 500ms capped at 10s, with jitter; honors Retry-After when present.
 func DefaultRetryPolicy() RetryPolicy {
 	return RetryPolicy{MaxAttempts: 4, BaseDelay: 500 * time.Millisecond, MaxDelay: 10 * time.Second}
-}
-
-// Request is a typed request with a JSON body of type B. Use struct{} for B when
-// there is no body.
-type Request[B any] struct {
-	Endpoint Endpoint
-	Args     []any // path params substituted into Endpoint
-	Query    url.Values
-	Body     *B // nil = no body
-	Header   http.Header
 }
 
 // Do is the generic request core: typed body B in, typed value T out.
@@ -119,16 +121,16 @@ func doRaw(ctx context.Context, c *Client, method, path string, q url.Values) ([
 			}
 		}
 
-		req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
+		req, err := http.NewRequestWithContext(ctx, method, u.String(), http.NoBody)
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Accept", "*/*")
+		req.Header.Set(HeaderAccept, AcceptAll)
 		if c.userAgent != "" {
-			req.Header.Set("User-Agent", c.userAgent)
+			req.Header.Set(HeaderUserAgent, c.userAgent)
 		}
 		if token != "" {
-			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set(HeaderAuthorization, AuthorizationBearer+token)
 		}
 
 		resp, err := c.http.Do(req)
@@ -168,7 +170,14 @@ func doRaw(ctx context.Context, c *Client, method, path string, q url.Values) ([
 
 // do executes a request with auth injection, rate limiting, retries/backoff and
 // error decoding, unmarshaling a 2xx JSON body into out (when non-nil).
-func (c *Client) do(ctx context.Context, method, path string, q url.Values, body []byte, header http.Header, out any) error {
+func (c *Client) do(
+	ctx context.Context,
+	method, path string,
+	q url.Values,
+	body []byte,
+	header http.Header,
+	out any,
+) error {
 	u := *c.baseURL
 	u.Path = strings.TrimRight(u.Path, "/") + path
 	if len(q) > 0 {
@@ -201,15 +210,15 @@ func (c *Client) do(ctx context.Context, method, path string, q url.Values, body
 		if err != nil {
 			return err
 		}
-		req.Header.Set("Accept", "application/json")
+		req.Header.Set(HeaderAccept, string(ContentTypeJSON))
 		if len(body) > 0 {
-			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set(HeaderContentType, string(ContentTypeJSON))
 		}
 		if c.userAgent != "" {
-			req.Header.Set("User-Agent", c.userAgent)
+			req.Header.Set(HeaderUserAgent, c.userAgent)
 		}
 		if token != "" {
-			req.Header.Set("Authorization", "Bearer "+token)
+			req.Header.Set(HeaderAuthorization, AuthorizationBearer+token)
 		}
 		for k, vs := range header {
 			for _, v := range vs {
@@ -269,8 +278,9 @@ func (p RetryPolicy) backoff(attempt int, retryAfter time.Duration) time.Duratio
 		return retryAfter
 	}
 	d := float64(p.BaseDelay) * math.Pow(2, float64(attempt-1))
-	if max := float64(p.MaxDelay); d > max {
-		d = max
+	maxD := float64(p.MaxDelay)
+	if d > maxD {
+		d = maxD
 	}
 	return time.Duration(rand.Int63n(int64(d) + 1))
 }

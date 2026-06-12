@@ -18,16 +18,13 @@ type Config struct {
 
 // Token is an OAuth token response plus a computed absolute Expiry.
 type Token struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	Scope        string `json:"scope"`
-	UserID       int64  `json:"user_id"`
-	RefreshToken string `json:"refresh_token"`
-
-	// ExpiresIn is the lifetime in seconds as returned by the API.
-	ExpiresIn int `json:"expires_in"`
-	// Expiry is the absolute expiry time, computed from ExpiresIn at receipt.
-	Expiry time.Time `json:"expiry,omitempty"`
+	Expiry       time.Time `json:"expiry,omitempty"`
+	AccessToken  string    `json:"access_token"`
+	TokenType    string    `json:"token_type"`
+	Scope        string    `json:"scope"`
+	RefreshToken string    `json:"refresh_token"`
+	UserID       int64     `json:"user_id"`
+	ExpiresIn    int       `json:"expires_in"`
 }
 
 // Valid reports whether the access token is non-empty and not expired, applying

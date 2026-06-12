@@ -32,7 +32,10 @@ type PageIterator[T any] struct {
 //	    if !ok { break }
 //	    for _, o := range orders { fmt.Println(o.ID) }
 //	}
-func NewPageIterator[T any](opts ListOptions, fetch func(context.Context, ListOptions) ([]T, Paging, error)) *PageIterator[T] {
+func NewPageIterator[T any](
+	opts ListOptions,
+	fetch func(context.Context, ListOptions) ([]T, Paging, error),
+) *PageIterator[T] {
 	return &PageIterator[T]{fetch: fetch, opts: opts}
 }
 

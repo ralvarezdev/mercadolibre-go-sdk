@@ -2,39 +2,41 @@ package mercadolibre
 
 import "context"
 
-// Country is a country in the classified-locations tree. The list endpoint
-// returns id/name only; the detail endpoint also includes states.
-type Country struct {
-	ID     string   `json:"id"`
-	Name   string   `json:"name"`
-	States []IDName `json:"states,omitempty"`
-}
+type (
+	// Country is a country in the classified-locations tree. The list endpoint
+	// returns id/name only; the detail endpoint also includes states.
+	Country struct {
+		ID     string   `json:"id"`
+		Name   string   `json:"name"`
+		States []IDName `json:"states,omitempty"`
+	}
 
-// State is a state/province with its cities (GET /classified_locations/states/{id}).
-type State struct {
-	ID             string          `json:"id"`
-	Name           string          `json:"name"`
-	Country        *IDName         `json:"country,omitempty"`
-	Cities         []IDName        `json:"cities,omitempty"`
-	GeoInformation *GeoInformation `json:"geo_information,omitempty"`
-}
+	// State is a state/province with its cities (GET /classified_locations/states/{id}).
+	State struct {
+		GeoInformation *GeoInformation `json:"geo_information,omitempty"`
+		Country        *IDName         `json:"country,omitempty"`
+		ID             string          `json:"id"`
+		Name           string          `json:"name"`
+		Cities         []IDName        `json:"cities,omitempty"`
+	}
 
-// City is a city (GET /classified_locations/cities/{id}).
-type City struct {
-	ID             string          `json:"id"`
-	Name           string          `json:"name"`
-	State          *IDName         `json:"state,omitempty"`
-	Country        *IDName         `json:"country,omitempty"`
-	GeoInformation *GeoInformation `json:"geo_information,omitempty"`
-}
+	// City is a city (GET /classified_locations/cities/{id}).
+	City struct {
+		GeoInformation *GeoInformation `json:"geo_information,omitempty"`
+		State          *IDName         `json:"state,omitempty"`
+		Country        *IDName         `json:"country,omitempty"`
+		ID             string          `json:"id"`
+		Name           string          `json:"name"`
+	}
 
-// GeoInformation carries optional geographic metadata for a location.
-type GeoInformation struct {
-	Location *GeoLocation `json:"location,omitempty"`
-}
+	// GeoInformation carries optional geographic metadata for a location.
+	GeoInformation struct {
+		Location *GeoLocation `json:"location,omitempty"`
+	}
 
-// LocationsService accesses the classified-locations geographic tree.
-type LocationsService struct{ c *Client }
+	// LocationsService accesses the classified-locations geographic tree.
+	LocationsService struct{ c *Client }
+)
 
 // Countries lists countries (GET /classified_locations/countries).
 func (s *LocationsService) Countries(ctx context.Context) ([]Country, error) {

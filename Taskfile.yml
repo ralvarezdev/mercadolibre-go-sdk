@@ -1,0 +1,174 @@
+version: '3'
+
+vars:
+  GO_FILES: ./...
+  EXAMPLES_DIR: ./examples
+  TOOLS_DIR: ./tools
+  DOCS_DIR: ./docs
+
+tasks:
+  default:
+    desc: Display available tasks
+    cmds:
+      - task -l
+
+  help:
+    desc: Display detailed help for all tasks
+    cmds:
+      - task -a
+
+  # Code Quality Tasks
+  fmt:
+    desc: Format Go code using goimports
+    cmds:
+      - goimports -w .
+
+  fmt-check:
+    desc: Check if code is formatted correctly
+    cmds:
+      - goimports -l .
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  lint-fix:
+    desc: Run golangci-lint with auto-fix enabled
+    cmds:
+      - golangci-lint run --fix ./...
+
+  # Testing Tasks
+  test:
+    desc: Run all tests
+    cmds:
+      - go test -v {{.GO_FILES}}
+
+  test-short:
+    desc: Run tests with short timeout
+    cmds:
+      - go test -short -v {{.GO_FILES}}
+
+  test-coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - go test -v -coverprofile=coverage.out {{.GO_FILES}} && go tool cover -html=coverage.out -o coverage.html && echo "Coverage report generated"
+
+  test-race:
+    desc: Run tests with race detector
+    cmds:
+      - go test -race -v {{.GO_FILES}}
+
+  # Build Tasks
+  build-examples:
+    desc: Build all example programs
+    cmds:
+      - cmd: |
+          for dir in examples/*/; do
+            if [ -f "$dir/main.go" ]; then
+              name=$(basename "$dir")
+              go build -o "$dir/app" "./$dir"
+            fi
+          done
+        platforms: [linux, darwin]
+      - cmd: |
+          Get-ChildItem -Path "examples" -Directory | ForEach-Object {
+            $mainFile = Join-Path $_.FullName "main.go"
+            if (Test-Path $mainFile) {
+              go build -o (Join-Path $_.FullName "app.exe") $_.FullName
+            }
+          }
+        platforms: [windows]
+
+  clean-examples:
+    desc: Clean built example binaries
+    cmds:
+      - cmd: find examples -name "app" -o -name "app.exe" | xargs rm -f
+        platforms: [linux, darwin]
+      - cmd: Get-ChildItem -Path "examples" -Include "app", "app.exe" -Recurse -Force | Remove-Item -Force
+        platforms: [windows]
+
+  # Documentation Tasks
+  docs-generate:
+    desc: Generate documentation from MercadoLibre docs
+    cmds:
+      - go run {{.TOOLS_DIR}}/docgen
+
+  docs-items:
+    desc: Generate docs for items-related pages
+    cmds:
+      - go run {{.TOOLS_DIR}}/docgen -only items
+
+  docs-list:
+    desc: List available documentation pages
+    cmds:
+      - go run {{.TOOLS_DIR}}/docgen -list
+
+  # Maintenance Tasks
+  clean:
+    desc: Clean build artifacts and coverage reports
+    deps:
+      - clean-examples
+    cmds:
+      - cmd: rm -f coverage.out coverage.html
+        platforms: [linux, darwin]
+      - cmd: Remove-Item -Path "coverage.out", "coverage.html" -Force -ErrorAction SilentlyContinue
+        platforms: [windows]
+
+  deps:
+    desc: Download and verify module dependencies
+    cmds:
+      - go mod download
+      - go mod verify
+
+  deps-tidy:
+    desc: Clean up unused module dependencies
+    cmds:
+      - go mod tidy
+
+  vet:
+    desc: Run go vet static analysis
+    cmds:
+      - go vet {{.GO_FILES}}
+
+  # Integration Tasks
+  check:
+    desc: Run all checks (fmt, lint, vet, test)
+    deps:
+      - fmt-check
+      - lint
+      - vet
+    cmds:
+      - task: test
+
+  check-fast:
+    desc: Run quick checks without full test suite
+    deps:
+      - fmt-check
+      - lint
+      - vet
+    cmds:
+      - task: test-short
+
+  ci:
+    desc: Run full CI pipeline
+    cmds:
+      - task: fmt-check
+      - task: lint
+      - task: vet
+      - task: test-coverage
+      - task: test-race
+
+  setup:
+    desc: Setup development environment
+    cmds:
+      - cmd: |
+          echo "Installing development tools..."
+          go install golang.org/x/tools/cmd/goimports@latest
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        platforms: [linux, darwin]
+      - cmd: |
+          echo "Installing development tools..."
+          go install golang.org/x/tools/cmd/goimports@latest
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        platforms: [windows]

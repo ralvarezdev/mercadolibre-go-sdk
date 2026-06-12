@@ -80,12 +80,23 @@ func TestClaimsGet(t *testing.T) {
 func TestClaimsSearchByPlayer(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		if q.Get("players.user_id") != "123456789" || q.Get("players.role") != "respondent" || q.Get("status") != "opened" {
+		if q.Get("players.user_id") != "123456789" || q.Get("players.role") != "respondent" ||
+			q.Get("status") != "opened" {
 			t.Errorf("query = %s", r.URL.RawQuery)
 		}
-		w.Write([]byte(`{"paging":{"total":1,"offset":0,"limit":30},"data":[{"id":1,"status":"opened","type":"returns","resource":"order","resource_id":2,"site_id":"MLM","players":[]}]}`))
+		w.Write(
+			[]byte(
+				`{"paging":{"total":1,"offset":0,"limit":30},"data":[{"id":1,"status":"opened","type":"returns","resource":"order","resource_id":2,"site_id":"MLM","players":[]}]}`,
+			),
+		)
 	})
-	resp, err := c.Claims.SearchByPlayer(context.Background(), 123456789, "respondent", "opened", ListOptions{Limit: 30})
+	resp, err := c.Claims.SearchByPlayer(
+		context.Background(),
+		123456789,
+		"respondent",
+		"opened",
+		ListOptions{Limit: 30},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +164,11 @@ func TestPromotionsItems_loosePaging(t *testing.T) {
 		if r.URL.Query().Get("promotion_type") != "DEAL" {
 			t.Errorf("missing promotion_type: %s", r.URL.RawQuery)
 		}
-		w.Write([]byte(`{"results":[{"id":"MLA639970000","status":"started","price":4037,"original_price":4427}],"paging":[]}`))
+		w.Write(
+			[]byte(
+				`{"results":[{"id":"MLA639970000","status":"started","price":4037,"original_price":4427}],"paging":[]}`,
+			),
+		)
 	})
 	resp, err := c.Promotions.Items(context.Background(), "MLA1111", "DEAL", nil)
 	if err != nil {

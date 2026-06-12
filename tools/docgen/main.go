@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -31,10 +32,13 @@ import (
 )
 
 const (
-	docsBase = "https://developers.mercadolibre.com.ve/es_ar/"
-	siteHost = "https://developers.mercadolibre.com.ve"
+	docsBase  = "https://developers.mercadolibre.com.ve/es_ar/"
+	siteHost  = "https://developers.mercadolibre.com.ve"
 	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
 		"(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+	headerUserAgent      = "User-Agent"
+	headerAcceptLanguage = "Accept-Language"
+	acceptLanguageValue  = "es-AR,es;q=0.9,en;q=0.8"
 )
 
 func main() {
@@ -115,7 +119,7 @@ func generate(client *http.Client, p Page, outDir string) error {
 	out.WriteString("\n")
 
 	dir := filepath.Join(outDir, p.Section)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return err
 	}
 	return os.WriteFile(filepath.Join(dir, p.Slug+".md"), []byte(out.String()), 0o644)
@@ -124,9 +128,9 @@ func generate(client *http.Client, p Page, outDir string) error {
 func fetch(client *http.Client, url string) (*html.Node, error) {
 	var lastErr error
 	for attempt := 0; attempt < 4; attempt++ {
-		req, _ := http.NewRequest(http.MethodGet, url, nil)
-		req.Header.Set("User-Agent", userAgent)
-		req.Header.Set("Accept-Language", "es-AR,es;q=0.9,en;q=0.8")
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, url, http.NoBody)
+		req.Header.Set(headerUserAgent, userAgent)
+		req.Header.Set(headerAcceptLanguage, acceptLanguageValue)
 		resp, err := client.Do(req)
 		if err != nil {
 			lastErr = err
