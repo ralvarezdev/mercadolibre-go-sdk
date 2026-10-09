@@ -1,8 +1,12 @@
 # mercadolibre-go-sdk
 
-A Go SDK for the [MercadoLibre](https://www.mercadolibre.com) (marketplace) developer APIs.
+A Go SDK for the [MercadoLibre](https://www.mercadolibre.com) marketplace developer APIs: a typed client with OAuth 2.0 (PKCE), rate limiting and retries, pagination helpers, a webhook handler, and a curated local copy of the API documentation.
 
-## Repository layout
+Module: `github.com/ralvarezdev/mercadolibre-go-sdk` (Go 1.26).
+
+---
+
+## Project structure
 
 ```
 auth/                 Self-contained OAuth package (no import cycle).
@@ -27,6 +31,8 @@ notifications/        Webhook handler package (Topic constants + http.Handler).
 tools/docgen/         Generator that fetches the live docs and writes docs/*.md.
 ```
 
+---
+
 ## Documentation generator
 
 `tools/docgen` fetches each page from
@@ -44,12 +50,14 @@ go run ./tools/docgen -list        # print the sitemap and exit
 
 The page inventory lives in `tools/docgen/sitemap.go`.
 
+---
+
 ## API basics
 
-- **REST base URL:** `https://api.mercadolibre.com`
-- **Auth:** OAuth 2.0 (authorization code + PKCE); rotating refresh tokens, persisted via `auth.Store`.
-- **Sites:** country sites such as `MLA` (Argentina), `MLB` (Brazil), `MLM` (Mexico), `MLC` (Chile)…
-- **Source docs language:** Spanish (es_AR).
+- **REST base URL** — `https://api.mercadolibre.com`
+- **Auth** — OAuth 2.0 (authorization code + PKCE); rotating refresh tokens, persisted via `auth.Store`.
+- **Sites** — country sites such as `MLA` (Argentina), `MLB` (Brazil), `MLM` (Mexico), `MLC` (Chile)…
+- **Source docs language** — Spanish (es_AR).
 
 ## Quickstart
 
@@ -164,17 +172,21 @@ mercadolibre.BuyingModeBuyItNow  // "buy_it_now"
 // Question, claim, payment statuses also defined in statuses.go
 ```
 
-## Roadmap
+---
 
-1. ✅ Capture the full MercadoLibre documentation set into `docs/` (raw → curated).
-2. ✅ **M1 — Core client + auth**: generic request core, endpoint constants, `APIError`, retries/backoff, `x/time/rate` limiter, full OAuth (AuthCodeURL/Exchange/Refresh/PKCE), rotating-refresh `TokenSource`, memory/file `Store`. First typed resources: Users + Sites. Runnable `examples/quickstart`.
-3. ✅ **M2 — Backbone resources**: Items (get/multiget, search, scan/scroll), Categories/Domains, Currencies, Locations, public site search.
-4. ✅ **M3 — Transactions**: Orders, Shipments, Questions & Answers, `missed_feeds`, `notifications/` webhook handler.
-5. ✅ **M4 — Breadth**: Messaging (post-sale), Claims/returns, Metrics (visits, trends, reputation), Promotions.
-6. ✅ **M5 — Billing + CI**: Billing info + reports + download. CI workflow (vet/build/race on Go 1.26).
-7. ✅ **M6 — Writes + polish**: Item create/update/pause/price/stock/description + picture upload + variations CRUD. Order feedback + notes. Promotion item enrollment/unenrollment. `GetRaw` for binary downloads. Typed status constants (`statuses.go`). Generic offset/limit `PageIterator`. Integration test harness (`//go:build integration`). `list-orders` and `publish-item` examples.
-8. ✅ **M7 — Surface completion**: `Users.AcceptedPaymentMethods/Brands`. `Sites.ListingTypes/ListingType/ListingPrices/PredictCategory`. `Shipments.Carrier/SLA/LeadTime/Labels` (label PDF). `Claims.History/TakeAction`. `Messaging.GetAttachment`. `Questions.ResponseTime`. `Promotions.Get`.
+## Milestones
+
+All of the following are implemented.
+
+1. Capture the full MercadoLibre documentation set into `docs/` (raw → curated).
+2. **M1 — Core client + auth**: generic request core, endpoint constants, `APIError`, retries/backoff, `x/time/rate` limiter, full OAuth (AuthCodeURL/Exchange/Refresh/PKCE), rotating-refresh `TokenSource`, memory/file `Store`. First typed resources: Users + Sites. Runnable `examples/quickstart`.
+3. **M2 — Backbone resources**: Items (get/multiget, search, scan/scroll), Categories/Domains, Currencies, Locations, public site search.
+4. **M3 — Transactions**: Orders, Shipments, Questions & Answers, `missed_feeds`, `notifications/` webhook handler.
+5. **M4 — Breadth**: Messaging (post-sale), Claims/returns, Metrics (visits, trends, reputation), Promotions.
+6. **M5 — Billing + CI**: Billing info + reports + download. CI workflow (vet/build/race on Go 1.26).
+7. **M6 — Writes + polish**: Item create/update/pause/price/stock/description + picture upload + variations CRUD. Order feedback + notes. Promotion item enrollment/unenrollment. `GetRaw` for binary downloads. Typed status constants (`statuses.go`). Generic offset/limit `PageIterator`. Integration test harness (`//go:build integration`). `list-orders` and `publish-item` examples.
+8. **M7 — Surface completion**: `Users.AcceptedPaymentMethods/Brands`. `Sites.ListingTypes/ListingType/ListingPrices/PredictCategory`. `Shipments.Carrier/SLA/LeadTime/Labels` (label PDF). `Claims.History/TakeAction`. `Messaging.GetAttachment`. `Questions.ResponseTime`. `Promotions.Get`.
 
 ## License
 
-See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
